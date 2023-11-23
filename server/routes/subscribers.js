@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const Subscriber = require("../models/subscriber");
+const subscriber = require("../models/subscriber");
 
 //Route Getting all
 router.get("/", async (req, res) => {
@@ -12,12 +13,11 @@ router.get("/", async (req, res) => {
   }
 });
 //Route Getting 1
-router.get("/:id", (req, res) => {
-  const param = req.params.id;
-  res.send(`Get hello sub ${param}`);
+router.get("/:id", getSubscriber, (req, res) => {
+  res.status(200).send(res.subscriber.name);
 });
 //Route Creating 1
-router.post("/", async (req, res) => {
+router.post("/", getSubscriber, async (req, res) => {
   const subscriber = new Subscriber({
     name: req.body.name,
     subscribeToChannel: req.body.subscribeToChannel,
@@ -30,12 +30,44 @@ router.post("/", async (req, res) => {
   }
 });
 //Route Update 1
-router.patch("/:id", (req, res) => {
-  req.params.id;
+router.patch("/:id", getSubscriber, async (req, res) => {
+  if (req.body.name != null) {
+    res.subscriber.name = req.body.name;
+  }
+  if (req.body.subscribeToChannel != null) {
+    res.subscriber.subscribeToChannel = req.body.subscribeToChannel;
+  }
+  try {
+    const updatedSubscriber = await res.subscriber.save();
+    res.send(updatedSubscriber);
+  } catch (err) {
+    res.status(400).send({ message: err.message });
+  }
 });
 //Route Delete 1
-router.patch("/:id", (req, res) => {
-  req.params.id;
+router.delete("/:id", getSubscriber, async (req, res) => {
+  try {
+    await res.subscriber.deleteOne();
+    res.status(200).send({ message: "Succesfully deleted" });
+  } catch (err) {
+    res
+      .status(500)
+      .send({ message: `Something went wrong with deleting:${err.message}` });
+  }
 });
+
+async function getSubscriber(req, res, next) {
+  let subscriber;
+  try {
+    subscriber = await Subscriber.findById(req.params.id);
+    if (subscriber == null) {
+      return res.status(404).send({ message: "Cannot find Subscriber" });
+    }
+  } catch (err) {
+    console.error(`Something went wrong:${err}`);
+  }
+  res.subscriber = subscriber;
+  next();
+}
 
 module.exports = router;
